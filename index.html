@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TechApp - Cuantificador de Obras</title>
+
+    <style>
+        /* Reset básico */
+        body { margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: grid; height: 100vh; overflow: hidden; }
+        
+        /* Layout Pantalla Dividida (Grid) */
+        @media (min-width: 768px) {
+            body { grid-template-columns: 350px 1fr; } /* Panel fijo 350px, Resto flexible */
+        }
+        @media (max-width: 767px) {
+            body { grid-template-columns: 1fr; grid-template-rows: auto 1fr; overflow-y: auto; }
+        }
+
+        /* Paneles */
+        /* Busca esta sección en tu <style> y reemplázala completa */
+
+.panel-izquierdo { 
+    background-color: #f8f9fa; 
+    padding: 20px; 
+    border-right: 1px solid #dee2e6; 
+    
+    /* CONTROL DE SCROLL (NUEVO) */
+    overflow-y: auto;       /* Habilita barra si el contenido es largo */
+    height: 100vh;          /* Forza a ocupar toda la altura de la ventana */
+    box-sizing: border-box; /* Asegura que el padding no rompa el ancho */
+    
+    display: flex; 
+    flex-direction: column; 
+    gap: 15px; 
+    box-shadow: 2px 0 5px rgba(0,0,0,0.05);
+    z-index: 10;
+}
+
+/* Ajuste para móviles para que no se rompa */
+@media (max-width: 767px) {
+    .panel-izquierdo {
+        height: auto;       /* En celular dejamos que crezca natural */
+        overflow-y: visible; 
+        max-height: none;
+    }
+}
+
+        /* Contenedor de la tabla con scroll */
+.panel-derecho {
+    padding: 20px;
+    overflow: hidden; /* Evita scroll en todo el panel */
+    display: flex;
+    flex-direction: column;
+}
+
+.tabla-container {
+    flex-grow: 1;
+    overflow-x: auto; /* Scroll Horizontal */
+    overflow-y: auto; /* Scroll Vertical */
+    border: 1px solid #ddd;
+    margin-top: 15px;
+    background: #fff;
+}
+
+table {
+    width: 100%;
+    min-width: 600px; /* Asegura que aparezca el scroll horizontal en pantallas chicas */
+    border-collapse: collapse;
+}
+
+/* Fijar el encabezado para no perderlo al bajar */
+thead th {
+    position: sticky;
+    top: 0;
+    background-color: #2c3e50;
+    z-index: 5;
+}
+
+        /* Componentes UI */
+        h2 { margin-top: 0; color: #2c3e50; font-size: 1.2rem; }
+        label { display: block; margin-bottom: 5px; font-weight: 600; color: #555; font-size: 0.9rem; }
+        
+        input, select { 
+            width: 100%; padding: 10px; border: 1px solid #ced4da; border-radius: 5px; box-sizing: border-box; font-size: 1rem;
+        }
+
+        /* Botonera de Archivos */
+        .zona-archivos {
+            background: #e3f2fd; padding: 15px; border-radius: 8px; border: 1px dashed #2196f3;
+        }
+        
+        button { 
+            width: 100%; padding: 12px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; transition: 0.2s; margin-top: 5px;
+        }
+        .btn-calcular { background-color: #2e7d32; color: white; margin-top: 20px; }
+        .btn-calcular:hover { background-color: #1b5e20; }
+        
+        .btn-guardar { background-color: #0277bd; color: white; }
+        .btn-cargar { background-color: #546e7a; color: white; }
+
+        /* Tabla de Resultados */
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 0.95rem; }
+        th, td { border-bottom: 1px solid #eee; padding: 12px; text-align: left; }
+        th { background-color: #2c3e50; color: white; position: sticky; top: 0; }
+        tr:hover { background-color: #f1f1f1; }
+        .total-row { font-weight: bold; background-color: #e8f5e9; }
+    </style>
+</head>
+<body>
+    <div class="panel-izquierdo">
+        
+        <div class="seccion-input">
+            <h2>📁 Identificación</h2>
+            <label>Nombre del Proyecto:</label>
+            <input type="text" id="prjNombre" placeholder="Ej. Nave Industrial Ternium">
+            <label>Cliente:</label>
+            <input type="text" id="prjCliente" placeholder="Ej. Constructora X">
+            <label>Ubicación / Ciudad:</label>
+            <input type="text" id="prjUbicacion">
+        </div>
+
+        <hr>
+
+        <div class="seccion-input">
+            <h2>📐 Geometría & Sistema</h2>
+            
+            <label style="color:#e65100; font-weight:bold;">1. Sistema General (Familia):</label>
+            <select id="inputSistemaGeneral">
+                </select>
+
+            <div style="margin-top: 10px;"></div>
+
+            <label style="color:#0277bd; font-weight:bold;">2. Sistema Específico (Producto):</label>
+            <select id="inputSistema" onchange="actualizarLeyendas()">
+                <optgroup label="--- LÁMINAS ACANALADAS ---">
+                    <option value="AC_TR101">TR-101 / R-101</option>
+                    <option value="AC_TR72">TR-72 (Acanalado)</option>
+                    <option value="AC_TRN100">TRN-100/35</option>
+                    <option value="AC_TR90">TR-90</option>
+                    <option value="AC_TO100">TO-100 (Ondulado)</option>
+                    <option value="AC_TO725">TO-725 (Ondulado)</option>
+                    <option value="AC_TO30">TO-30 Full Hard</option>
+                </optgroup>
+
+                <optgroup label="--- ROLADOS EN SITIO (SSR) ---">
+                    <option value="SSR_KR18">KR-18 (Engargolado)</option>
+                    <option value="SSR_KR24">KR-24 (Engargolado)</option>
+                </optgroup>
+
+                <optgroup label="--- PANELES AISLADOS ---">
+                    <option value="PN_MTECHO">Multytecho</option>
+                    <option value="PN_GTECHO">Galvatecho</option>
+                    <option value="PN_MMURO">Multymuro</option>
+                    <option value="PN_GALVALOK">Galvalok</option>
+                </optgroup>
+
+                <optgroup label="--- LOSACERO / ENTREPISO ---">
+                    <option value="DC_LOS25">Losacero 25</option>
+                    <option value="DC_LOS15">Losacero 15</option>
+                    <option value="DC_LOS30">Losacero 30 / Sección 4</option>
+                    <option value="DC_TRD915">TRD-91.5 (Deck)</option>
+                </optgroup>
+
+                <optgroup label="--- OTROS ---">
+                    <option value="MEM_TPO">Membrana TPO</option>
+                    <option value="TJ_GALVATEJA">Galvateja</option>
+                    <option value="ISO_POLY4X8">Polyiso 4x8</option>
+                </optgroup>
+            </select>
+            <small id="leyendaPendiente" style="color: gray; font-style: italic; display:block; margin-bottom:10px;"></small>
+
+            <hr style="border-top: 1px dashed #ccc;">
+
+            <label>Largo Cubierta (Canalón) [m]:</label>
+            <input type="number" id="inputLargo" placeholder="Sentido del flujo">
+            
+            <label>Ancho Vertiente (Caída) [m]:</label>
+            <input type="number" id="inputVertiente" placeholder="Sentido pendiente">
+
+            <label>Altura Edificio (H) [m]:</label>
+            <input type="number" id="inputAltura" placeholder="Viento">
+
+            <label>Pendiente (%):</label>
+            <input type="number" id="inputPendiente">
+        </div>
+
+        <hr>
+
+        <div class="seccion-input">
+            <h2>💨 Viento y Estructura</h2>
+            
+            <label>Velocidad Regional (km/h):</label>
+            <select id="inputViento">
+                <option value="150">150 km/h (Estándar)</option>
+                <option value="200">200 km/h (Huracán)</option>
+            </select>
+
+            <hr style="border-top: 1px dashed #ccc; margin: 10px 0;">
+
+            <label style="color:#0277bd; font-weight:bold;">DEFINICIÓN DE APOYOS (LARGUEROS)</label>
+            <select id="selectModoApoyos" onchange="configurarUI_Apoyos()">
+                <option value="PROPUESTO">1. Propuesto por Separación (Calculado)</option>
+                <option value="UNIFORME">2. Cantidad Conocida Uniforme</option>
+                <option value="ESPECIFICO">3. Específico (Campo vs Perímetro)</option>
+            </select>
+
+            <div id="grupoSep">
+                <label>Separación propuesta (m):</label>
+                <input type="number" id="inputSepApoyos" value="1.52" placeholder="Ej. 1.52" onkeyup="previsualizarTotalApoyos()">
+            </div>
+
+            <div id="grupoTotal">
+                <label>Total Largueros (Uniforme):</label>
+                <input type="number" id="inputTotalApoyos" placeholder="Cant. Total" style="font-weight:bold;">
+                <small style="color:gray; font-size:0.8em;">*Incluye larguero de inicio y final</small>
+            </div>
+
+            <div id="grupoEspecifico" style="display:none; background:#fff3e0; padding:5px; border-radius:4px;">
+                <label>Largueros en CAMPO:</label>
+                <input type="number" id="inputApoyosCampo" placeholder="Cant. Campo">
+                
+                <label>Largueros en PERÍMETRO:</label>
+                <input type="number" id="inputApoyosPerim" placeholder="Cant. Perímetro">
+            </div>
+        </div>
+
+        <button class="btn-calcular" onclick="ejecutarCalculoFehaciente()">⚡ CALCULAR DESPIECE</button>
+    </div>
+
+    <div class="panel-derecho">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h2>📋 Despiece de Materiales</h2>
+        </div>
+
+    <div id="outputResumen"></div>
+
+    <div class="tabla-container">
+        <table id="tablaResultados">
+            <thead>
+                <tr>
+                    <th>Concepto</th>
+                    <th>Cálculo / Detalle</th>
+                    <th style="text-align: right;">Cant.</th>
+                    <th style="text-align: center;">Unidad</th>
+                </tr>
+            </thead>
+            <tbody>
+                </tbody>
+        </table>
+    </div>
+</div>
+
+    <script src="catalogos.js"></script>
+    <script src="app_logic.js"></script>
+</body>
+</html>
