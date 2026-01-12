@@ -14,7 +14,38 @@
             body { grid-template-columns: 350px 1fr; } /* Panel fijo 350px, Resto flexible */
         }
         @media (max-width: 767px) {
-            body { grid-template-columns: 1fr; grid-template-rows: auto 1fr; overflow-y: auto; }
+            /* 1. Liberamos la altura del cuerpo para que crezca infinito hacia abajo */
+            body { 
+                display: block; 
+                height: auto; 
+                overflow-y: auto; /* Scroll natural del navegador */
+            }
+
+            /* 2. El panel izquierdo deja de tener scroll interno y altura fija */
+            .panel-izquierdo {
+                height: auto;       /* Crece según el contenido */
+                max-height: none;   /* Quitamos limites */
+                overflow-y: visible; 
+                border-right: none;
+                border-bottom: 5px solid #004d40; /* Separador visual fuerte */
+                padding-bottom: 30px;
+            }
+
+            /* 3. Ajuste de textos y botones para dedos */
+            h2 { font-size: 1.5rem; }
+            input, select, button { font-size: 16px; min-height: 44px; } /* Evita zoom indeseado en iPhone */
+            
+            /* 4. El panel derecho (Resultados) va debajo */
+            .panel-derecho {
+                height: auto;
+                overflow: visible;
+                padding-bottom: 50px;
+            }
+            
+            /* 5. Aseguramos que la tabla tenga scroll horizontal si es muy ancha */
+            .tabla-container {
+                overflow-x: auto;
+            }
         }
 
         /* Paneles */
@@ -254,4 +285,5 @@ thead th {
     <script src="catalogos.js"></script>
     <script src="app_logic.js"></script>
 </body>
+
 </html>
